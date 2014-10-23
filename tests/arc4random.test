@@ -1,0 +1,224 @@
+#
+# arc4random.test
+# Test arc4random
+# Stuart Cassoff
+# Fall 2014
+#
+
+# Cheap check if Tcl or Jim
+set tcl [catch {info version}]
+
+if {$tcl} {
+	package require Tcl 8.5
+	package require tcltest 2
+	namespace import ::tcltest::test
+
+	package require arc4random
+	namespace import ::arc4random::*
+} else {
+	source [file dirname [info script]]/testing.tcl
+	package require arc4random
+}
+
+
+if {$tcl} {
+
+
+test arc4random-0.1 {arg parsing for arc4random ensemble command: no subcommand} -body {
+	arc4random
+} -returnCodes error -match glob -result {wrong # args: should be "arc4random subcommand \?arg* ...\?"}
+
+test arc4random-0.2 {arg parsing for arc4random ensemble command: bad subcommand} -body {
+	arc4random potato
+} -returnCodes error -result {unknown or ambiguous subcommand "potato": must be bytes, random, or uniform}
+
+test arc4random-1.1 {arg parsing for random command} -body {
+	::arc4random::commands::arc4random 42
+} -returnCodes error -result {wrong # args: should be "::arc4random::commands::arc4random"}
+test arc4random-1.2 {arg parsing for random subcommand} -body {
+	arc4random random 42
+} -returnCodes error -result {wrong # args: should be "arc4random random"}
+test arc4random-1.3 {arg parsing for random math function} -body {
+	expr {arc4random(42)}
+} -returnCodes error -result {wrong # args: should be "tcl::mathfunc::arc4random"}
+
+test arc4random-2.1 {arg parsing for bytes command} -body {
+	::arc4random::commands::arc4bytes
+} -returnCodes error -result {wrong # args: should be "::arc4random::commands::arc4bytes nbytes"}
+test arc4random-2.2 {arg parsing for bytes subcommand} -body {
+	arc4random bytes
+} -returnCodes error -result {wrong # args: should be "arc4random bytes nbytes"}
+test arc4random-2.3 {arg parsing for bytes math function} -body {
+	expr {arc4bytes()}
+} -returnCodes error -result {wrong # args: should be "tcl::mathfunc::arc4bytes nbytes"}
+test arc4random-2.4 {arg parsing for bytes command} -body {
+	::arc4random::commands::arc4bytes 42 43
+} -returnCodes error -result {wrong # args: should be "::arc4random::commands::arc4bytes nbytes"}
+test arc4random-2.5 {arg parsing for bytes subcommand} -body {
+	arc4random bytes 42 43
+} -returnCodes error -result {wrong # args: should be "arc4random bytes nbytes"}
+test arc4random-2.6 {arg parsing for bytes math function} -body {
+	expr {arc4bytes(42,43)}
+} -returnCodes error -result {wrong # args: should be "tcl::mathfunc::arc4bytes nbytes"}
+
+test arc4random-3.1 {arg parsing for uniform command} -body {
+	::arc4random::commands::arc4uniform
+} -returnCodes error -result {wrong # args: should be "::arc4random::commands::arc4uniform upperbound"}
+test arc4random-3.2 {arg parsing for uniform subcommand} -body {
+	arc4random uniform
+} -returnCodes error -result {wrong # args: should be "arc4random uniform upperbound"}
+test arc4random-3.3 {arg parsing for uniform math function} -body {
+	expr {arc4uniform()}
+} -returnCodes error -result {wrong # args: should be "tcl::mathfunc::arc4uniform upperbound"}
+test arc4random-3.4 {arg parsing for uniform command} -body {
+	::arc4random::commands::arc4uniform 42 43
+} -returnCodes error -result {wrong # args: should be "::arc4random::commands::arc4uniform upperbound"}
+test arc4random-3.5 {arg parsing for uniform subcommand} -body {
+	arc4random uniform 42 43
+} -returnCodes error -result {wrong # args: should be "arc4random uniform upperbound"}
+test arc4random-3.6 {arg parsing for uniform math function} -body {
+	expr {arc4uniform(42,43)}
+} -returnCodes error -result {wrong # args: should be "tcl::mathfunc::arc4uniform upperbound"}
+
+test arc4random-10.1 {random command} -body {
+	set i [::arc4random::commands::arc4random]
+	expr {[string is integer $i] && $i >= 0}
+} -result 1
+test arc4random-10.2 {random ensemble subcommand} -body {
+	set i [arc4random random]
+	expr {[string is integer $i] && $i >= 0}
+} -result 1
+test arc4random-10.3 {random math function} -body {
+	set i [expr {arc4random()}]
+	expr {[string is integer $i] && $i >= 0}
+} -result 1
+
+test arc4random-20.1 {bytes command} -body {
+	set i [::arc4random::commands::arc4bytes 123]
+	expr {[string length $i] == 123}
+} -result 1
+test arc4random-20.2 {bytes ensemble subcommand} -body {
+	set i [arc4random bytes 123]
+	expr {[string length $i] == 123}
+} -result 1
+test arc4random-20.3 {bytes math function} -body {
+	set i [expr {arc4bytes(123)}]
+	expr {[string length $i] == 123}
+} -result 1
+test arc4random-20.4 {bytes command: zero nbytes} -body {
+	::arc4random::commands::arc4bytes 0
+} -returnCodes error -result {bad value "0" for nbytes: must be > 0}
+test arc4random-20.5 {bytes ensemble subcommand: zero nbytes} -body {
+	arc4random bytes 0
+} -returnCodes error -result {bad value "0" for nbytes: must be > 0}
+test arc4random-20.6 {bytes math function: zero nbytes} -body {
+	expr {arc4bytes(0)}
+} -returnCodes error -result {bad value "0" for nbytes: must be > 0}
+test arc4random-20.7 {bytes command: bad nbytes} -body {
+	::arc4random::commands::arc4bytes -1
+} -returnCodes error -result {bad value "-1" for nbytes: must be > 0}
+test arc4random-20.8 {bytes ensemble subcommand: bad nbytes} -body {
+	arc4random bytes -1
+} -returnCodes error -result {bad value "-1" for nbytes: must be > 0}
+test arc4random-20.9 {bytes math function: bad nbytes} -body {
+	expr {arc4bytes(-1)}
+} -returnCodes error -result {bad value "-1" for nbytes: must be > 0}
+
+test arc4random-30.1 {uniform command} -body {
+	set i [::arc4random::commands::arc4uniform 123]
+	expr {[string is integer $i] && $i >= 0 && $i <= 123}
+} -result 1
+test arc4random-30.2 {uniform ensemble subcommand} -body {
+	set i [arc4random uniform 123]
+	expr {[string is integer $i] && $i >= 0 && $i <= 123}
+} -result 1
+test arc4random-30.3 {uniform math function} -body {
+	set i [expr {arc4uniform(123)}]
+	expr {[string is integer $i] && $i >= 0 && $i <= 123}
+} -result 1
+test arc4random-30.4 {uniform command: zero upperbound} -body {
+	::arc4random::commands::arc4uniform 0
+} -result 0
+test arc4random-30.5 {uniform ensemble subcommand: zero upperbound} -body {
+	arc4random uniform 0
+} -result 0
+test arc4random-30.6 {uniform math function: zero upperbound} -body {
+	expr {arc4uniform(0)}
+} -result 0
+test arc4random-30.7 {uniform command: bad upperbound} -body {
+	::arc4random::commands::arc4uniform -1
+} -returnCodes error -result {bad value "-1" for upperbound: must be >= 0}
+test arc4random-30.8 {uniform ensemble subcommand: bad upperbound} -body {
+	arc4random uniform -1
+} -returnCodes error -result {bad value "-1" for upperbound: must be >= 0}
+test arc4random-30.9 {uniform math function: bad upperbound} -body {
+	expr {arc4uniform(-1)}
+} -returnCodes error -result {bad value "-1" for upperbound: must be >= 0}
+
+
+} else { # if jim
+
+
+test arc4random-0.1 {arg parsing for arc4random ensemble command: no subcommand} -body {
+	arc4random
+} -returnCodes error -result [join {{wrong # args: should be "arc4random command ..."} {Use "arc4random -help ?command?" for help}} \n]
+
+test arc4random-0.2 {arg parsing for arc4random ensemble command: bad subcommand} -body {
+	arc4random potato
+} -returnCodes error -result {arc4random, unknown command "potato": should be random, bytes, uniform}
+
+test arc4random-1.1 {arg parsing for random subcommand} -body {
+	arc4random random 42
+} -returnCodes error -result {wrong # args: should be "arc4random random"}
+
+test arc4random-2.1 {arg parsing for bytes subcommand} -body {
+	arc4random bytes
+} -returnCodes error -result {wrong # args: should be "arc4random bytes nbytes"}
+test arc4random-2.2 {arg parsing for bytes subcommand} -body {
+	arc4random bytes 42 43
+} -returnCodes error -result {wrong # args: should be "arc4random bytes nbytes"}
+
+test arc4random-3.1 {arg parsing for uniform subcommand} -body {
+	arc4random uniform
+} -returnCodes error -result {wrong # args: should be "arc4random uniform upperbound"}
+test arc4random-3.2 {arg parsing for uniform subcommand} -body {
+	arc4random uniform 42 43
+} -returnCodes error -result {wrong # args: should be "arc4random uniform upperbound"}
+
+test arc4random-10.1 {random subcommand} -body {
+	set i [arc4random random]
+	expr {[string is integer $i] && $i >= 0}
+} -result 1
+
+test arc4random-20.1 {bytes subcommand} -body {
+	set i [arc4random bytes 123]
+	expr {[string bytelength $i] == 123}
+} -result 1
+test arc4random-20.2 {bytes subcommand: zero nbytes} -body {
+	arc4random bytes 0
+} -returnCodes error -result {bad value "0" for nbytes: must be > 0}
+test arc4random-20.3 {bytes subcommand: bad nbytes} -body {
+	arc4random bytes -1
+} -returnCodes error -result {bad value "-1" for nbytes: must be > 0}
+
+test arc4random-30.1 {uniform subcommand} -body {
+	set i [arc4random uniform 123]
+	expr {[string is integer $i] && $i >= 0 && $i <= 123}
+} -result 1
+test arc4random-30.2 {uniform subcommand: zero upperbound} -body {
+	arc4random uniform 0
+} -result 0
+test arc4random-30.3 {uniform subcommand: bad upperbound} -body {
+	arc4random uniform -1
+} -returnCodes error -result {bad value "-1" for upperbound: must be >= 0}
+
+
+}; # if tcl
+
+
+# cleanup
+::tcltest::cleanupTests
+flush stdout
+return
+
+# EOF

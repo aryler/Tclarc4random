@@ -1,0 +1,2 @@
+All of the files in this extension are covered by LICENSE (ISC), except for:
+ * tclconfig/install-sh: governed by license inside itself (MIT).

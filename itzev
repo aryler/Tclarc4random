@@ -1,0 +1,414 @@
+#! /bin/sh
+
+# Spot o' Conf -- Copyright 2014 Stuart Cassoff. ISC license.
+
+
+NAME=spot
+PKG_NAME=spot
+PKG_VER=0.0
+
+LIB=libspot.dog
+INIT=
+
+FOR_WHAT=Tcl
+#FOR_WHAT=Jim
+
+if test X"${TCL}" = X""; then
+  TCL=8.6
+fi
+tcl="${TCL}"
+
+VPATH='${srcdir}/generic'
+
+#srcdir=`dirname $0`
+srcdir="${0%/*}"
+
+SHELL=/bin/sh
+prefix=/usr/local
+
+appdir=''
+bindir='${prefix}/bin'
+libdir='${prefix}/lib'
+mandir='${prefix}/share/man'
+docdir='${prefix}/share/doc'
+exadir='${prefix}/share/examples'
+moddir='${prefix}/lib/tcl/modules/${tcl}'
+pkgdir=''
+
+TCLSH_PROG='tclsh${tcl}'
+WISH_PROG='wish${tcl}'
+JIMSH_PROG=jimsh
+BJE='/usr/local/share/examples/jim/build-jim-ext'
+
+JIM_INC_DIR='${prefix}/include/jim'
+JIM_LIB_DIR='${prefix}/lib'
+JIM_LIB=jim
+
+TCL_CONF_DIR='${prefix}/lib/tcl/tcl${tcl}'
+
+DEBUG=no
+THREADS=''
+tclmod=yes
+
+ECHO=echo
+
+. ${srcdir}/spoto.conf
+
+if test X"${tcl}" != X"${TCL}"; then
+  tcl="${TCL}"
+fi
+
+if test X"${FOR_WHAT}" != X"Jim"; then
+  FOR_WHAT=Tcl
+fi
+
+if test X"${THREADS}" = X""; then
+  if test $FOR_WHAT = Jim; then
+    THREADS=no
+  else
+    THREADS=yes
+  fi
+fi
+
+if test X"${pkgdir}" = X""; then
+  if test $FOR_WHAT = Jim; then
+    pkgdir='${prefix}/lib/jim'
+  else
+    pkgdir='${prefix}/lib/tcl'
+  fi
+fi
+
+if test X"${appdir}" = X""; then
+  appdir=${NAME}
+fi
+
+if test $FOR_WHAT = Jim; then
+  t=:
+  j=echo
+else
+  t=echo
+  j=:
+fi
+
+showhelpinfo=''
+showhelp=''
+
+state=flag
+
+for opt in "$@" "" ; do
+  case $opt in 
+    -\?|-help)
+      showhelp=yes
+      break
+    ;;
+    -quiet)
+      ECHO=:
+      continue
+    ;;
+    -tclmod)
+      tclmod=yes
+      continue
+    ;;
+    -notclmod)
+      tclmod=no
+      continue
+    ;;
+    -debug)
+      DEBUG=yes
+      continue
+    ;;
+    -nodebug)
+      DEBUG=no
+      continue
+    ;;
+    -threads)
+      THREADS=yes
+      continue
+    ;;
+    -nothreads)
+      THREADS=no
+      continue
+    ;;
+  esac
+  case $state in
+    flag)
+      state=$opt
+    ;;
+    -tcl)
+      tcl=$opt
+      state=flag
+    ;;
+    -appdir)
+      APPDIR=$opt
+      state=flag
+    ;;
+    -prefix)
+      PREFIX=$opt
+      state=flag
+    ;;
+    -bindir)
+      bindir=$opt
+      state=flag
+    ;;
+    -libdir)
+      libdir=$opt
+      state=flag
+    ;;
+    -pkgdir)
+      pkgdir=$opt
+      state=flag
+    ;;
+    -moddir)
+      moddir=$opt
+      state=flag
+    ;;
+    -mandir)
+      mandir=$opt
+      state=flag
+    ;;
+    -docdir)
+      docdir=$opt
+      state=flag
+    ;;
+    -exdir)
+      exdir=$opt
+      state=flag
+    ;;
+    -tclconfdir)
+      TCL_CONF_DIR=$opt
+      state=flag
+    ;;
+    -jimincdir)
+      JIM_INC_DIR=$opt
+      state=flag
+    ;;
+    -jimlibdir)
+      JIM_LIB_DIR=$opt
+      state=flag
+    ;;
+    -jimlib)
+      JIM_LIB_DIR=$opt
+      state=flag
+    ;;
+    -tclsh)
+      TCLSH_PROG=$opt
+      state=flag
+    ;;
+    -wish)
+      WISH_PROG=$opt
+      state=flag
+    ;;
+    -jimsh)
+      JIMSH_PROG=$opt
+      state=flag
+    ;;
+    -bje)
+      BJE=$opt
+      state=flag
+    ;;
+    *)
+      echo "Invalid option: \"$state\""
+      showhelpinfo=yes
+      break
+    ;;
+  esac
+done
+
+
+${ECHO} "Spot o' Conf 0.2 configurator for: $NAME $PKG_VER for $FOR_WHAT."
+
+if test X"${showhelpinfo}" = X"yes"; then
+  echo "Use ${0##*/} -help for help"
+  exit
+fi
+
+if test X"${showhelp}" = X"yes"; then
+  echo "Usage: ${0##*/} [option [value] ...]"
+  echo 'Options:'
+  ${t} "  -tcl          ver    Tcl version to use [${tcl}]"
+  echo "  -appdir       dir    Usually the name of the app [${NAME}]"
+  echo "  -prefix       dir    Prefix [${prefix}]"
+  echo "  -bindir       dir    Executable files dir [${bindir}]"
+  echo "  -libdir       dir    Library files dir [${libdir}]"
+  echo "  -pkgdir       dir    Packages dir [${pkgdir}]"
+  ${t} "  -moddir       dir    Modules dir [${moddir}]"
+  echo "  -mandir       dir    Man files dir [${mandir}]"
+  echo "  -docdir       dir    Documentation files dir [${docdir}]"
+  echo "  -exadir       dir    Example files dir [${exadir}]"
+  ${t} "  -tclconfdir   dir    Where to find tclConfig.sh [${TCL_CONF_DIR}]"
+  ${j} "  -jimincdir    dir    Where to find Jim include files [${JIM_INC_DIR}]"
+  ${j} "  -jimlibdir    dir    Where to find Jim lib files [${JIM_LIB_DIR}]"
+  ${j} "  -jimlib       dir    Name of Jim lib file [${JIM_LIB}]"
+  ${t} "  -tclsh        file   Path to tclsh [${TCLSH_PROG}]"
+  ${t} "  -wish         file   Path to wish [${WISH_PROG}]"
+  ${j} "  -jimsh        file   Path to jimsh [${JIMSH_PROG}]"
+  ${j} "  -bje          file   Path to build-jim-ext [${BJE}]"
+  echo "  -(no)debug           Enable symbols and checks [${DEBUG}]"
+  ${t} "  -(no)threads         Enable threads [${THREADS}]"
+  ${t} "  -(no)tclmod          Install as a Tcl module [${tclmod}]"
+  echo '  -quiet               Do not display configure messages'
+  echo '  -help, -?            This information'
+  exit
+fi
+
+
+if test X"$DEBUG" = X"yes"; then
+  CFLAGS_DEBUG='-g'
+else
+  CFLAGS_DEBUG='-DNDEBUG=1'
+fi
+
+TH_LIBS=''
+if test X"$THREADS" = X"yes"; then
+  TH_CFLAGS='-pthread'
+  TH_DEFS='-DTCL_THREADS=1 -DUSE_THREAD_ALLOC=1'
+else
+  TH_CFLAGS=''
+  TH_DEFS=''
+fi
+
+eval "TCLCONFIG=${TCL_CONF_DIR}/tclConfig.sh"
+eval "TCLSH_PROG=$TCLSH_PROG"
+
+TCL_INC_SPEC=''
+TCL_LIB_SPEC=''
+TCL_STUB_LIB_SPEC=''
+
+eval JIM_INC_SPEC="-I${JIM_INC_DIR}"
+eval "JIM_LIB_SPEC=\"-L${JIM_LIB_DIR} -l${JIM_LIB}\""
+
+if test $FOR_WHAT = Jim; then
+  PKGFILES=''
+  ZDEFS='$(JDEFS)'
+  CC_INC_SPEC='$(JIM_INC_SPEC)'
+  LD_LIB_SPEC='$(JIM_LIB_SPEC)'
+  PKG_INSTALL_DIR='${pkgdir}'
+  TESTFWK='testing.tcl'
+else
+  PKGFILES='pkgfiles'
+  ZDEFS='$(TDEFS)'
+  CC_INC_SPEC='$(TCL_INC_SPEC)'
+  #LD_LIB_SPEC='$(TCL_LIB_SPEC)'
+  LD_LIB_SPEC='$(TCL_STUB_LIB_SPEC)'
+  PKG_INSTALL_DIR='${pkgdir}/${appdir}'
+  TESTFWK='all.tcl'
+fi
+
+OPT_DEFS="-DPACKAGE_NAME=\\\\\"$PKG_NAME\\\\\" -DPACKAGE_VERSION=\\\\\"$PKG_VER\\\\\""
+
+CC=${CC:=cc}
+CCFLAGS='-pipe'
+CFLAGS_WARN='-Wall'
+CFLAGS_OPT='-O2'
+SH_CFLAGS='-fpic'
+LDFLAGS=''
+SH_LDFLAGS='-shared'
+TDEFS='-DUSE_TCL_STUBS=1'
+JDEFS=''
+EXT_INC_SPEC=''
+EXT_LIB_SPEC=''
+
+LD_LIBRARY_PATH_VAR=LD_LIBRARY_PATH
+
+if test $FOR_WHAT = Tcl; then
+  . ${TCLCONFIG}
+  TCL_INC_SPEC="${TCL_INCLUDE_SPEC}"
+fi
+
+
+awk  \
+-v NAME="$NAME" \
+-v PKG_NAME="$PKG_NAME" \
+-v PKG_VER="$PKG_VER" \
+-v LIB="$LIB" \
+-v INIT="$INIT" \
+-v CC="$CC" \
+-v CCFLAGS="$CCFLAGS" \
+-v CFLAGS_WARN="$CFLAGS_WARN" \
+-v CFLAGS_OPT="$CFLAGS_OPT" \
+-v SH_CFLAGS="$SH_CFLAGS" \
+-v TH_CFLAGS="$TH_CFLAGS" \
+-v TH_LIBS="$TH_LIBS" \
+-v TH_DEFS="$TH_DEFS" \
+-v OPT_DEFS="$OPT_DEFS" \
+-v LDFLAGS="$LDFLAGS" \
+-v SH_LDFLAGS="$SH_LDFLAGS" \
+-v TDEFS="$TDEFS" \
+-v JDEFS="$JDEFS" \
+-v ZDEFS="$ZDEFS" \
+-v EXT_INC_SPEC="$EXT_INC_SPEC" \
+-v EXT_LIB_SPEC="$EXT_LIB_SPEC" \
+-v TCL_INC_SPEC="$TCL_INC_SPEC" \
+-v JIM_INC_SPEC="$JIM_INC_SPEC" \
+-v TCL_LIB_SPEC="$TCL_LIB_SPEC" \
+-v JIM_LIB_SPEC="$JIM_LIB_SPEC" \
+-v TCL_STUB_LIB_SPEC="$TCL_STUB_LIB_SPEC" \
+-v CC_INC_SPEC="$CC_INC_SPEC" \
+-v LD_LIB_SPEC="$LD_LIB_SPEC" \
+-v LD_LIBRARY_PATH_VAR="$LD_LIBRARY_PATH_VAR" \
+-v TCLSH_PROG="$TCLSH_PROG" \
+-v JIMSH_PROG="$JIMSH_PROG" \
+-v BJE="$BJE" \
+-v SHELL="$SHELL" \
+-v CFLAGS_DEBUG="$CFLAGS_DEBUG" \
+-v FOR_WHAT="$FOR_WHAT" \
+-v PKGFILES="$PKGFILES" \
+-v PKG_INSTALL_DIR="$PKG_INSTALL_DIR" \
+-v TESTFWK="$TESTFWK" \
+-v VPATH="$VPATH" \
+-v srcdir=$srcdir \
+-v appdir=$appdir \
+-v pkgdir=$pkgdir \
+-v docdir=$docdir \
+-v exadir=$exadir \
+-v prefix=$prefix \
+-f -  $srcdir/Makefile.in <<COW >Makefile
+{ while(sub("@NAME@",NAME)) {} }
+{ while(sub("@PKG_NAME@",PKG_NAME)) {} }
+{ while(sub("@PKG_VER@",PKG_VER)) {} }
+{ while(sub("@LIB@",LIB)) {} }
+{ while(sub("@INIT@",INIT)) {} }
+{ while(sub("@CC@",CC)) {} }
+{ while(sub("@CCFLAGS@",CCFLAGS)) {} }
+{ while(sub("@CFLAGS_WARN@",CFLAGS_WARN)) {} }
+{ while(sub("@CFLAGS_OPT@",CFLAGS_OPT)) {} }
+{ while(sub("@SH_CFLAGS@",SH_CFLAGS)) {} }
+{ while(sub("@TH_CFLAGS@",TH_CFLAGS)) {} }
+{ while(sub("@TH_LIBS@",TH_LIBS)) {} }
+{ while(sub("@TH_DEFS@",TH_DEFS)) {} }
+{ while(sub("@OPT_DEFS@",OPT_DEFS)) {} }
+{ while(sub("@LDFLAGS@",LDFLAGS)) {} }
+{ while(sub("@SH_LDFLAGS@",SH_LDFLAGS)) {} }
+{ while(sub("@TDEFS@",TDEFS)) {} }
+{ while(sub("@JDEFS@",JDEFS)) {} }
+{ while(sub("@ZDEFS@",ZDEFS)) {} }
+{ while(sub("@EXT_INC_SPEC@",EXT_INC_SPEC)) {} }
+{ while(sub("@EXT_LIB_SPEC@",EXT_LIB_SPEC)) {} }
+{ while(sub("@TCL_INC_SPEC@",TCL_INC_SPEC)) {} }
+{ while(sub("@JIM_INC_SPEC@",JIM_INC_SPEC)) {} }
+{ while(sub("@TCL_LIB_SPEC@",TCL_LIB_SPEC)) {} }
+{ while(sub("@JIM_LIB_SPEC@",JIM_LIB_SPEC)) {} }
+{ while(sub("@TCL_STUB_LIB_SPEC@",TCL_STUB_LIB_SPEC)) {} }
+{ while(sub("@LD_LIB_SPEC@",LD_LIB_SPEC)) {} }
+{ while(sub("@CC_INC_SPEC@",CC_INC_SPEC)) {} }
+{ while(sub("@LD_LIBRARY_PATH_VAR@",LD_LIBRARY_PATH_VAR)) {} }
+{ while(sub("@TCLSH_PROG@",TCLSH_PROG)) {} }
+{ while(sub("@JIMSH_PROG@",JIMSH_PROG)) {} }
+{ while(sub("@BJE@",BJE)) {} }
+{ while(sub("@SHELL@",SHELL)) {} }
+{ while(sub("@CFLAGS_DEBUG@",CFLAGS_DEBUG)) {} }
+{ while(sub("@FOR_WHAT@",FOR_WHAT)) {} }
+{ while(sub("@PKGFILES@",PKGFILES)) {} }
+{ while(sub("@PKG_INSTALL_DIR@",PKG_INSTALL_DIR)) {} }
+{ while(sub("@TESTFWK@",TESTFWK)) {} }
+{ while(sub("@VPATH@",VPATH)) {} }
+{ while(sub("@srcdir@",srcdir)) {} }
+{ while(sub("@pkgdir@",pkgdir)) {} }
+{ while(sub("@appdir@",appdir)) {} }
+{ while(sub("@docdir@",docdir)) {} }
+{ while(sub("@exadir@",exadir)) {} }
+{ while(sub("@prefix@",prefix)) {} }
+{ print }
+COW
+
+# EOF

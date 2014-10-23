@@ -1,0 +1,19 @@
+what:	Tclarc4random 0.3
+where:	https://github.com/aryler/Tclarc4random/
+where:	http://www3.bell.net/stwo/software/
+who:	Stuart Cassoff <stwo@users.sourceforge.net>
+why:	Tcl interface to arc4random(3)
+when:	Fall 2014
+how:	$ ./itzev ?options? && make
+how:	$ make test
+how:	$ make install
+need:	Tcl, arc4random(3), POSIX
+
+Tclarc4random should build easily on any POSIX system
+that has arc4random(3).
+
+The configuration program is called 'itzev'.
+$ ./itzev -help
+
+By default, Tclarc4random will be configured to build
+threaded for Tcl 8.6 (threaded) on OpenBSD.

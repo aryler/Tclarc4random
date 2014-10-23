@@ -1,0 +1,36 @@
+NAME
+	Tclarc4random - Tcl interface to arc4random(3)
+
+SYNOPSIS
+	package require Tcl 8.5
+
+	package require arc4random
+	namespace import ::arc4random::arc4random
+
+	arc4random random
+	arc4random bytes <nbytes>
+	arc4random uniform <upperbound>
+
+	Math functions:
+	arc4random()
+	arc4bytes(nbytes)
+	arc4uniform(upperbound)
+
+DESCRIPTION
+	The Tclarc4random extension provides a Tcl interface to arc4random(3).
+	Access to arc4random functions is provided through the arc4random
+	ensemble command or through the arc4* math functions.
+
+ENSEMBLE COMMANDS / MATH FUNCTIONS
+	random
+	arc4random()
+		Returns a 32-bit unsigned random number.
+
+	bytes <nbytes>
+	arc4bytes(nbytes)
+		Returns a binary string nbytes bytes long of random data.
+
+	uniform <upperbound>
+	arc4uniform(upperbound)
+		Returns a 32-bit unsigned random number
+		uniformly distributed but less than upperbound.

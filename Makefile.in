@@ -1,0 +1,233 @@
+# Tcl or Jim extension
+
+NAME =		@NAME@
+PKG_NAME =	@PKG_NAME@
+VER =		@PKG_VER@
+INIT =		@INIT@
+
+prefix =	@prefix@
+srcdir =	@srcdir@
+appdir =	@appdir@
+pkgdir =	@pkgdir@
+docdir =	@docdir@
+exadir =	@exadir@
+
+VPATH =		@VPATH@
+
+CC =		@CC@
+CCFLAGS =	@CCFLAGS@
+CFLAGS_WARN =	@CFLAGS_WARN@
+CFLAGS_OPT =	@CFLAGS_OPT@
+SH_CFLAGS =	@SH_CFLAGS@
+TH_CFLAGS = 	@TH_CFLAGS@
+TH_LIBS = 	@TH_LIBS@
+TH_DEFS =	@TH_DEFS@
+OPT_DEFS =	@OPT_DEFS@
+LDFLAGS =	@LDFLAGS@
+SH_LDFLAGS =	@SH_LDFLAGS@
+TDEFS =		@TDEFS@
+JDEFS =		@JDEFS@
+ZDEFS =		@ZDEFS@
+EXT_INC_SPEC =	@EXT_INC_SPEC@
+EXT_LIB_SPEC =	@EXT_LIB_SPEC@
+TCL_INC_SPEC =	@TCL_INC_SPEC@
+JIM_INC_SPEC =	@JIM_INC_SPEC@
+TCL_LIB_SPEC =	@TCL_LIB_SPEC@
+JIM_LIB_SPEC =	@JIM_LIB_SPEC@
+TCL_STUB_LIB_SPEC = @TCL_STUB_LIB_SPEC@
+
+CC_INC_SPEC =	@CC_INC_SPEC@
+LD_LIB_SPEC =	@LD_LIB_SPEC@
+INC_SPEC =	$(EXT_INC_SPEC) $(CC_INC_SPEC)
+LIB_SPEC =	$(EXT_LIB_SPEC) $(LD_LIB_SPEC)
+
+CFLAGS_DEBUG =	@CFLAGS_DEBUG@
+
+SRC =		$(NAME).c
+OBJ =		$(NAME).o
+SHLIB =		@LIB@
+
+BJE		= @BJE@
+SHELL		= @SHELL@
+TCL_PKG_ENV	= @LD_LIBRARY_PATH_VAR@=".:$(@LD_LIBRARY_PATH_VAR@)" TCLLIBPATH="."
+JIM_PKG_ENV	= JIMLIB="."
+TCLSH_PROG	= @TCLSH_PROG@
+TCLSH		= $(TCL_PKG_ENV) $(TCLSH_PROG)
+JIMSH_PROG	= @JIMSH_PROG@
+JIMSH		= $(JIM_PKG_ENV) $(JIMSH_PROG)
+SCRIPT		=
+
+TESTFWK		= @TESTFWK@
+TESTFLAGS	=
+
+DAT_MODE	 = 644
+BIN_MODE	 = 755
+DESTDIR		 =
+INSTALL_OPTIONS	 =
+INSTALL		 = $(SHELL) $(srcdir)/tclconfig/install-sh -c $(INSTALL_OPTIONS)
+INSTALL_DATA_DIR = $(INSTALL) -d -m 755
+INSTALL_PROGRAM	 = $(INSTALL) -m $(BIN_MODE)
+INSTALL_DATA	 = $(INSTALL) -m $(DAT_MODE)
+INSTALL_SCRIPT	 = $(INSTALL) -m $(BIN_MODE)
+INSTALL_LIBRARY	 = $(INSTALL) -m $(DAT_MODE)
+
+PKG_INSTALL_DIR	 = @PKG_INSTALL_DIR@
+DOC_INSTALL_DIR	 = ${docdir}/${appdir}
+EXA_INSTALL_DIR	 = ${exadir}/${appdir}
+
+INDENT = "    "
+
+DIST_NAME = $(NAME)-$(VER)
+DIST_ROOT = /tmp/dist$(DIST_NAME)
+DIST_DIR  = $(DIST_ROOT)/$(DIST_NAME)
+DIST_FILE = $(DIST_NAME).tar.gz
+DIST_INSTALL_DATA   = $(INSTALL) -m 644
+DIST_INSTALL_SCRIPT = $(INSTALL) -m 755
+
+
+all: $(SHLIB) @PKGFILES@
+
+$(OBJ): $(SRC)
+	$(CC) \
+	-c \
+	$(CCFLAGS) \
+	$(CFLAGS_WARN) \
+	$(TH_CFLAGS) \
+	$(SH_CFLAGS) \
+	$(CFLAGS_OPT) \
+	$(CFLAGS_DEBUG) \
+	$(ZDEFS) \
+	$(TH_DEFS) \
+	$(OPT_DEFS) \
+	$(INC_SPEC) \
+	-o $@ $<
+
+$(SHLIB): $(OBJ)
+	$(CC) \
+	$(CCFLAGS) \
+	$(SH_CFLAGS) \
+	$(CFLAGS_WARN) \
+	$(CFLAGS_OPT) \
+	$(LDFLAGS) \
+	$(SH_LDFLAGS) \
+	-o $@ \
+	$(OBJ) \
+	$(TH_LIBS) \
+	$(LIB_SPEC)
+
+bje:
+	$(BJE) --keep --notest $(ZDEFS) $(OPT_DEFS) -o $(PKG_NAME) ${srcdir}/generic/$(SRC)
+
+pkgIndex.tcl:
+	echo 'package ifneeded $(PKG_NAME) $(VER) [list load [file join $$dir $(SHLIB)] $(INIT)]' > pkgIndex.tcl
+
+pkgfiles: pkgIndex.tcl
+
+clean-:
+
+clean-pkgfiles:
+	rm -f pkgIndex.tcl
+
+clean: clean-@PKGFILES@
+	rm -f $(SHLIB) $(STLIB) $(OBJ) *.core
+
+distclean: clean
+	rm -f Makefile
+
+shell-Tcl: all
+	$(TCLSH) $(SCRIPT)
+
+shell-Jim: all
+	$(JIMSH) $(SCRIPT)
+
+shell: shell-@FOR_WHAT@
+
+test-Tcl: all
+	$(TCLSH) $(srcdir)/tests/$(TESTFWK) $(TESTFLAGS)
+
+test-Jim: all
+	for i in $(srcdir)/tests/*.test; do $(JIMSH) $$i $(TESTFLAGS); done
+
+test: test-@FOR_WHAT@
+
+install: all install-lib install-doc
+#  install-exa
+
+install-lib:
+	@echo "Installing lib files in $(DESTDIR)$(PKG_INSTALL_DIR)/"
+	@$(INSTALL_DATA_DIR) $(DESTDIR)$(PKG_INSTALL_DIR)
+	@echo -n $(INDENT)
+	@echo -n "$(SHLIB) "
+	@$(INSTALL_LIBRARY) $(SHLIB) $(DESTDIR)$(PKG_INSTALL_DIR)
+	@if [ X"@PKGFILES@" != X"" ]; then \
+	  echo -n "pkgIndex.tcl"; \
+	  $(INSTALL_DATA) pkgIndex.tcl $(DESTDIR)$(PKG_INSTALL_DIR); \
+	fi
+	@echo ""
+
+install-doc:
+	@echo "Installing doc files in $(DESTDIR)$(DOC_INSTALL_DIR)/"
+	@$(INSTALL_DATA_DIR) $(DESTDIR)$(DOC_INSTALL_DIR)
+	@echo -n $(INDENT)
+	@list='../LICENSE $(NAME).txt'; \
+	for i in $$list; do \
+	    echo -n "$$i "; \
+	    $(INSTALL_DATA) $(srcdir)/doc/$$i $(DESTDIR)$(DOC_INSTALL_DIR); \
+	done
+	@echo ""
+
+install-exa:
+	@echo "Installing example files in $(DESTDIR)$(EXA_INSTALL_DIR)/"
+	@$(INSTALL_DATA_DIR) $(DESTDIR)$(EXA_INSTALL_DIR)
+	@echo -n $(INDENT)
+	@list='$(NAME)_example.tcl'; \
+	for i in $$list; do \
+	    echo -n "$$i "; \
+	    $(INSTALL_DATA) $(srcdir)/examples/$$i $(DESTDIR)$(EXA_INSTALL_DIR); \
+	done
+	@echo ""
+
+dist-clean:
+	rm -rf $(DIST_DIR) $(DIST_ROOT)/$(DIST_FILE)
+
+dist: dist-clean
+	$(INSTALL_DATA_DIR) $(DIST_DIR)
+	list='LICENSE README README.licenses Makefile.in spoto.conf'; \
+	for p in $$list; do \
+	    $(DIST_INSTALL_DATA) $(srcdir)/$$p $(DIST_DIR)/; \
+	done
+	list='itzev'; \
+	for p in $$list; do \
+	    $(DIST_INSTALL_SCRIPT) $(srcdir)/$$p $(DIST_DIR)/; \
+	done
+	$(INSTALL_DATA_DIR) $(DIST_DIR)/generic
+	DIR=generic; \
+	list='$(SRC)'; \
+	for p in $$list; do \
+	    $(DIST_INSTALL_DATA) $(srcdir)/$$DIR/$$p $(DIST_DIR)/$$DIR/; \
+	done
+	$(INSTALL_DATA_DIR) $(DIST_DIR)/doc
+	DIR=doc; \
+	list='$(NAME).txt'; \
+	for p in $$list; do \
+	    $(DIST_INSTALL_DATA) $(srcdir)/$$DIR/$$p $(DIST_DIR)/$$DIR/; \
+	done
+	$(INSTALL_DATA_DIR) $(DIST_DIR)/tests
+	DIR=tests; \
+	list='$(TESTFWK) $(PKG_NAME).test'; \
+	for p in $$list; do \
+	    $(DIST_INSTALL_DATA) $(srcdir)/$$DIR/$$p $(DIST_DIR)/$$DIR/; \
+	done
+	$(INSTALL_DATA_DIR) $(DIST_DIR)/tclconfig
+	DIR=tclconfig; \
+	list='install-sh'; \
+	for p in $$list; do \
+	    $(DIST_INSTALL_DATA) $(srcdir)/$$DIR/$$p $(DIST_DIR)/$$DIR/; \
+	done
+	tar zcvf $(DIST_ROOT)/$(DIST_FILE) -C $(DIST_ROOT) $(DIST_NAME)
+
+.PHONY: all shell test install install-lib install-doc install-exa dist clean distclean
+.PHONY: test-Tcl test-Jim
+
+
+# EOF
